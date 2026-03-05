@@ -14,6 +14,17 @@ impl CheckedAdd for f64 {
     }
 }
 
+// shim for the missing method on f64
+trait CheckedSub: Sized + ops::Sub<Output = Self> {
+    fn checked_sub(self, rhs: Self) -> Option<Self>;
+}
+
+impl CheckedSub for f64 {
+    fn checked_sub(self, rhs: Self) -> Option<Self> {
+        Some(self - rhs)
+    }
+}
+
 impl<Rhs> ops::AddAssign<Rhs> for Value
 where
     Rhs: Into<Value>,
@@ -48,7 +59,11 @@ where
         if rhs > *self {
             self.promote_to_signed();
         }
-        dispatch_operation!(self, rhs, n, |rhs| *n -= rhs);
+        *self = dispatch_operation!(self, rhs, n, |rhs| (*n).checked_sub(rhs).map(Value::from))
+            .unwrap_or_else(|| {
+                self.promote();
+                dispatch_operation!(self, rhs, n, |rhs| Value::from(*n - rhs))
+            })
     }
 }
 
@@ -380,6 +395,81 @@ mod tests {
             Value::SignedInt(_) | Value::SignedBigInt(_)
         ));
         assert_eq!(result, (-1_i64).into());
+    }
+
+    #[test]
+    fn sub_overflow_promotes_to_signed_or_float() {
+        // ------------------------------------------------------------------------
+        // -- sub overflow u64 bounds, result should promote to SignedBigInt
+        // ------------------------------------------------------------------------
+        let left: Value = u64::MIN.into();
+        let right: Value = u64::MAX.into();
+        let result = left - right;
+        let expected_order = Order::SignedBigInt;
+        assert_eq!(
+            result.order(),
+            expected_order,
+            "sub overflow should promote this to {expected_order:?} : got = {result:?}"
+        );
+        let expected_value = (-18446744073709551615_i128).into();
+        assert_eq!(
+            result, expected_value,
+            "sub overflow value should be {expected_value:?} : got = {result:?}"
+        );
+
+        // ------------------------------------------------------------------------
+        // -- sub overflow i64 bounds, result should promote to SignedBigInt
+        // ------------------------------------------------------------------------
+        let left: Value = i64::MIN.into();
+        let right: Value = i64::MAX.into();
+        let result = left - right;
+        let expected_order = Order::SignedBigInt;
+        assert_eq!(
+            result.order(),
+            expected_order,
+            "sub overflow should promote this to {expected_order:?} : got = {result:?}"
+        );
+        let expected_value = (-18446744073709551615_i128).into();
+        assert_eq!(
+            result, expected_value,
+            "sub overflow value should be {expected_value:?} : got = {result:?}"
+        );
+
+        // ------------------------------------------------------------------------
+        // -- sub overflow u128 bounds, result should promote to Float
+        // ------------------------------------------------------------------------
+        let left: Value = u128::MIN.into();
+        let right: Value = u128::MAX.into();
+        let result = left - right;
+        let expected_order = Order::Float;
+        assert_eq!(
+            result.order(),
+            expected_order,
+            "sub overflow should promote this to {expected_order:?} : got = {result:?}"
+        );
+        let expected_value = (-3.402823669209385e38).into();
+        assert_eq!(
+            result, expected_value,
+            "sub overflow value should be {expected_value:?} : got = {result:?}"
+        );
+
+        // ------------------------------------------------------------------------
+        // -- sub overflow i128 bounds, result should promote to Float
+        // ------------------------------------------------------------------------
+        let left: Value = i128::MIN.into();
+        let right: Value = i128::MAX.into();
+        let result = left - right;
+        let expected_order = Order::Float;
+        assert_eq!(
+            result.order(),
+            expected_order,
+            "sub overflow should promote this to {expected_order:?} : got = {result:?}"
+        );
+        let expected_value = (-3.402823669209385e38).into();
+        assert_eq!(
+            result, expected_value,
+            "sub overflow value should be {expected_value:?} : got = {result:?}"
+        );
     }
 
     // ---------- INFINITY PROPAGATION ----------
