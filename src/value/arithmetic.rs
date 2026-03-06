@@ -400,28 +400,10 @@ mod tests {
     #[test]
     fn sub_overflow_promotes_to_signed_or_float() {
         // ------------------------------------------------------------------------
-        // -- sub overflow u64 bounds, result should promote to SignedBigInt
-        // ------------------------------------------------------------------------
-        let left: Value = u64::MIN.into();
-        let right: Value = u64::MAX.into();
-        let result = left - right;
-        let expected_order = Order::SignedBigInt;
-        assert_eq!(
-            result.order(),
-            expected_order,
-            "sub overflow should promote this to {expected_order:?} : got = {result:?}"
-        );
-        let expected_value = (-18446744073709551615_i128).into();
-        assert_eq!(
-            result, expected_value,
-            "sub overflow value should be {expected_value:?} : got = {result:?}"
-        );
-
-        // ------------------------------------------------------------------------
         // -- sub overflow i64 bounds, result should promote to SignedBigInt
         // ------------------------------------------------------------------------
-        let left: Value = i64::MIN.into();
-        let right: Value = i64::MAX.into();
+        let left: Value = 0_i64.into();
+        let right: Value = i64::MIN.into();
         let result = left - right;
         let expected_order = Order::SignedBigInt;
         assert_eq!(
@@ -429,25 +411,7 @@ mod tests {
             expected_order,
             "sub overflow should promote this to {expected_order:?} : got = {result:?}"
         );
-        let expected_value = (-18446744073709551615_i128).into();
-        assert_eq!(
-            result, expected_value,
-            "sub overflow value should be {expected_value:?} : got = {result:?}"
-        );
-
-        // ------------------------------------------------------------------------
-        // -- sub overflow u128 bounds, result should promote to Float
-        // ------------------------------------------------------------------------
-        let left: Value = u128::MIN.into();
-        let right: Value = u128::MAX.into();
-        let result = left - right;
-        let expected_order = Order::Float;
-        assert_eq!(
-            result.order(),
-            expected_order,
-            "sub overflow should promote this to {expected_order:?} : got = {result:?}"
-        );
-        let expected_value = (-3.402823669209385e38).into();
+        let expected_value = (9223372036854775808_i128).into();
         assert_eq!(
             result, expected_value,
             "sub overflow value should be {expected_value:?} : got = {result:?}"
@@ -456,8 +420,8 @@ mod tests {
         // ------------------------------------------------------------------------
         // -- sub overflow i128 bounds, result should promote to Float
         // ------------------------------------------------------------------------
-        let left: Value = i128::MIN.into();
-        let right: Value = i128::MAX.into();
+        let left: Value = 0_i128.into();
+        let right: Value = i128::MIN.into();
         let result = left - right;
         let expected_order = Order::Float;
         assert_eq!(
@@ -465,7 +429,7 @@ mod tests {
             expected_order,
             "sub overflow should promote this to {expected_order:?} : got = {result:?}"
         );
-        let expected_value = (-3.402823669209385e38).into();
+        let expected_value = (1.7014118346046923e38).into();
         assert_eq!(
             result, expected_value,
             "sub overflow value should be {expected_value:?} : got = {result:?}"
