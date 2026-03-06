@@ -397,42 +397,28 @@ mod tests {
         assert_eq!(result, (-1_i64).into());
     }
 
-    #[test]
-    fn sub_overflow_promotes_to_signed_or_float() {
-        // ------------------------------------------------------------------------
-        // -- sub overflow i64 bounds, result should promote to SignedBigInt
-        // ------------------------------------------------------------------------
-        let left: Value = 0_i64.into();
-        let right: Value = i64::MIN.into();
+    #[rstest]
+    #[case::i64_overflows_to_i128(0_i64, i64::MIN, Order::SignedBigInt, 9223372036854775808_i128)]
+    #[case::i128_overflows_to_float(0_i128, i128::MIN, Order::Float, 1.7014118346046923e38)]
+    fn sub_overflow_promotes_to_signed_or_float(
+        #[case] left: impl Into<Value>,
+        #[case] right: impl Into<Value>,
+        #[case] expected_order: Order,
+        #[case] expected_value: impl Into<Value>,
+    ) {
+        let left = left.into();
+        let right = right.into();
         let result = left - right;
-        let expected_order = Order::SignedBigInt;
-        assert_eq!(
-            result.order(),
-            expected_order,
-            "sub overflow should promote this to {expected_order:?} : got = {result:?}"
-        );
-        let expected_value = (9223372036854775808_i128).into();
-        assert_eq!(
-            result, expected_value,
-            "sub overflow value should be {expected_value:?} : got = {result:?}"
-        );
 
-        // ------------------------------------------------------------------------
-        // -- sub overflow i128 bounds, result should promote to Float
-        // ------------------------------------------------------------------------
-        let left: Value = 0_i128.into();
-        let right: Value = i128::MIN.into();
-        let result = left - right;
-        let expected_order = Order::Float;
         assert_eq!(
             result.order(),
             expected_order,
             "sub overflow should promote this to {expected_order:?} : got = {result:?}"
         );
-        let expected_value = (1.7014118346046923e38).into();
+        let expected_value = expected_value.into();
         assert_eq!(
             result, expected_value,
-            "sub overflow value should be {expected_value:?} : got = {result:?}"
+            "sub overflow value should be {expected_value:?} : got = {result:?}",
         );
     }
 
