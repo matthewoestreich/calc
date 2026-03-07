@@ -9,6 +9,7 @@ trait CheckedMaths:
     + ops::Add<Output = Self>
     + ops::Sub<Output = Self>
     + ops::Div<Output = Self>
+    + ops::Mul<Output = Self>
     + ops::Rem<Output = Self>
 {
     fn checked_add(self, rhs: Self) -> Option<Self>;
