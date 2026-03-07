@@ -14,6 +14,17 @@ impl CheckedAdd for f64 {
     }
 }
 
+// shim for the missing method on f64
+trait CheckedSub: Sized + ops::Sub<Output = Self> {
+    fn checked_sub(self, rhs: Self) -> Option<Self>;
+}
+
+impl CheckedSub for f64 {
+    fn checked_sub(self, rhs: Self) -> Option<Self> {
+        Some(self - rhs)
+    }
+}
+
 impl<Rhs> ops::AddAssign<Rhs> for Value
 where
     Rhs: Into<Value>,
@@ -48,7 +59,11 @@ where
         if rhs > *self {
             self.promote_to_signed();
         }
-        dispatch_operation!(self, rhs, n, |rhs| *n -= rhs);
+        *self = dispatch_operation!(self, rhs, n, |rhs| (*n).checked_sub(rhs).map(Value::from))
+            .unwrap_or_else(|| {
+                self.promote();
+                dispatch_operation!(self, rhs, n, |rhs| Value::from(*n - rhs))
+            })
     }
 }
 
@@ -380,6 +395,31 @@ mod tests {
             Value::SignedInt(_) | Value::SignedBigInt(_)
         ));
         assert_eq!(result, (-1_i64).into());
+    }
+
+    #[rstest]
+    #[case::i64_overflows_to_i128(0_i64, i64::MIN, Order::SignedBigInt, 9223372036854775808_i128)]
+    #[case::i128_overflows_to_float(0_i128, i128::MIN, Order::Float, 1.7014118346046923e38)]
+    fn sub_overflow_promotes_to_signed_or_float(
+        #[case] left: impl Into<Value>,
+        #[case] right: impl Into<Value>,
+        #[case] expected_order: Order,
+        #[case] expected_value: impl Into<Value>,
+    ) {
+        let left = left.into();
+        let right = right.into();
+        let result = left - right;
+
+        assert_eq!(
+            result.order(),
+            expected_order,
+            "sub overflow should promote this to {expected_order:?} : got = {result:?}"
+        );
+        let expected_value = expected_value.into();
+        assert_eq!(
+            result, expected_value,
+            "sub overflow value should be {expected_value:?} : got = {result:?}",
+        );
     }
 
     // ---------- INFINITY PROPAGATION ----------
