@@ -503,7 +503,7 @@ mod tests {
         let expected_value = expected_value.into();
         assert_eq!(
             result, expected_value,
-            "sub overflow value should be {expected_value:?} : got = {result:?}",
+            "div overflow value should be {expected_value:?} : got = {result:?}",
         );
     }
 
